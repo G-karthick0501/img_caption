@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Caption Generator</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #fafafa;
+      color: #262626;
+    }
+    h1 {
+      text-align: center;
+      color: #262626;
+    }
+    .container {
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .preview-container {
+      width: 100%;
+      height: 300px;
+      border: 2px dashed #efefef;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+    .preview-image {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+    .upload-btn {
+      background-color: #0095f6;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      margin-bottom: 20px;
+      font-weight: bold;
+    }
+    .desc-input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #dbdbdb;
+      border-radius: 4px;
+      margin-bottom: 10px;
+      resize: vertical;
+    }
+    .btn {
+      background-color: #0095f6;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+      margin-right: 10px;
+    }
+    .output-container {
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+      padding: 20px;
+    }
+    .caption-text {
+      font-size: 16px;
+      line-height: 1.5;
+      margin-bottom: 10px;
+    }
+    .hashtags {
+      color: #00376b;
+      font-size: 15px;
+      margin-top: 10px;
+    }
+    .copy-btn {
+      background-color: #efefef;
+      color: #262626;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    .hidden {
+      display: none;
+    }
+    .loading {
+      text-align: center;
+      padding: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>AI Caption Generator</h1>
+  
+  <div class="container">
+    <h2>Upload Image</h2>
+    <div class="preview-container" id="preview">
+      <p id="placeholder-text">Preview will appear here</p>
+    </div>
+    <input type="file" id="image-upload" accept="image/*" style="display:none;">
+    <button class="upload-btn" id="upload-btn">Choose Image</button>
+    
+    <h3>Image Description</h3>
+    <p>Describe what's in the image (or let AI caption generate this):</p>
+    <textarea class="desc-input" id="description" rows="4" placeholder="Example: A sunset over the beach with palm trees"></textarea>
+    
+    <h3>Caption Style</h3>
+    <select id="style" class="desc-input">
+      <option value="casual">Casual</option>
+      <option value="professional">Professional</option>
+      <option value="funny">Funny</option>
+      <option value="inspirational">Inspirational</option>
+      <option value="minimalist">Minimalist</option>
+    </select>
+    
+    <button class="btn" id="generate-btn">Generate Caption</button>
+  </div>
+  
+  <div id="loading" class="loading hidden">
+    <p>Generating your perfect caption...</p>
+  </div>
+  
+  <div id="output" class="output-container hidden">
+    <h2>Your Generated Caption</h2>
+    <div class="caption-text" id="caption-result"></div>
+    <div class="hashtags" id="hashtags-result"></div>
+    <button class="copy-btn" id="copy-btn">Copy to Clipboard</button>
+  </div>
+
+  <script>
+    // Sample captions and hashtags by style
+    const captionTemplates = {
+      casual: [
+        "Just living my best life ✨",
+        "This moment though 💯",
+        "Some days just hit different",
+        "Exactly where I'm supposed to be",
+        "No filter needed for this vibe"
+      ],
+      professional: [
+        "Dedicated to excellence in everything I pursue",
+        "Growth happens outside your comfort zone",
+        "Embracing new challenges and opportunities",
+        "Building the future, one day at a time",
+        "Success is a journey, not a destination"
+      ],
+      funny: [
+        "If this isn't on my dating profile, swipe left",
+        "My camera roll is 99% pictures like this and 1% screenshots of memes",
+        "I'd tell you a joke but my life's already one",
+        "This is my serious face. No, really.",
+        "Disclaimer: Way less cool in real life"
+      ],
+      inspirational: [
+        "Every sunrise brings new possibilities ✨",
+        "Embrace the journey, not just the destination",
+        "Find joy in the ordinary moments",
+        "Let your light shine through even the darkest days",
+        "The best is yet to come, keep believing"
+      ],
+      minimalist: [
+        "Present.",
+        "This.",
+        "Moments.",
+        "Being.",
+        "Here."
+      ]
+    };
+    
+    const hashtagSets = {
+      casual: ["#vibes", "#livingmybestlife", "#nofilter", "#mood", "#liveauthentic", "#everyday", "#justbecause"],
+      professional: ["#business", "#entrepreneur", "#success", "#motivation", "#goals", "#ambition", "#excellence"],
+      funny: ["#comedy", "#lol", "#cantstopwontstop", "#sendhelp", "#whoneedssleep", "#sorrynotsorry", "#awkward"],
+      inspirational: ["#blessed", "#gratitude", "#mindfulness", "#positivevibes", "#inspiration", "#believeinyourself", "#journey"],
+      minimalist: ["#less", "#minimal", "#simple", "#essentials", "#clarity", "#focus", "#presence"]
+    };
+    
+    // Image-specific hashtags based on description keywords
+    const imageSpecificHashtags = {
+      "sunset": ["#sunset", "#goldenhour", "#sunsetlovers", "#eveningvibes"],
+      "beach": ["#beachlife", "#oceanview", "#coastalliving", "#waves"],
+      "food": ["#foodie", "#yummy", "#foodporn", "#delicious", "#nom"],
+      "coffee": ["#coffeeaddict", "#morningcoffee", "#coffeelovers", "#caffeine"],
+      "nature": ["#naturelovers", "#outdoors", "#wilderness", "#earthfocus"],
+      "city": ["#cityscape", "#urbanlife", "#streetphotography", "#cityvibes"],
+      "friends": ["#friendships", "#squad", "#bestfriends", "#memories"],
+      "selfie": ["#selfie", "#selflove", "#portrait", "#me"],
+      "travel": ["#wanderlust", "#travelgram", "#adventure", "#explore"],
+      "fitness": ["#fitlife", "#workout", "#healthylifestyle", "#motivation"]
+    };
+    
+    // DOM elements
+    const uploadBtn = document.getElementById('upload-btn');
+    const imageUpload = document.getElementById('image-upload');
+    const preview = document.getElementById('preview');
+    const placeholder = document.getElementById('placeholder-text');
+    const description = document.getElementById('description');
+    const styleSelect = document.getElementById('style');
+    const generateBtn = document.getElementById('generate-btn');
+    const loadingDiv = document.getElementById('loading');
+    const outputDiv = document.getElementById('output');
+    const captionResult = document.getElementById('caption-result');
+    const hashtagsResult = document.getElementById('hashtags-result');
+    const copyBtn = document.getElementById('copy-btn');
+    
+    // Event listeners
+    uploadBtn.addEventListener('click', () => {
+      imageUpload.click();
+    });
+    
+    imageUpload.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) {
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        
+        reader.onload = (event) => {
+          const img = document.createElement('img');
+          img.src = event.target.result;
+          img.className = 'preview-image';
+          preview.innerHTML = '';
+          preview.appendChild(img);
+        };
+        
+        reader.readAsDataURL(file);
+      }
+    });
+    
+    generateBtn.addEventListener('click', generateCaption);
+    copyBtn.addEventListener('click', copyToClipboard);
+    
+    function generateCaption() {
+      const style = styleSelect.value;
+      const desc = description.value.toLowerCase();
+      
+      // Show loading
+      loadingDiv.classList.remove('hidden');
+      outputDiv.classList.add('hidden');
+      
+      setTimeout(() => {
+        // Generate caption
+        const randomCaption = captionTemplates[style][Math.floor(Math.random() * captionTemplates[style].length)];
+        
+        // Generate hashtags
+        let hashtags = [];
+        
+        // Add style-based hashtags (3-4 random ones)
+        const styleHashtags = [...hashtagSets[style]];
+        shuffleArray(styleHashtags);
+        hashtags = hashtags.concat(styleHashtags.slice(0, 3));
+        
+        // Add image-specific hashtags based on description
+        Object.keys(imageSpecificHashtags).forEach(keyword => {
+          if (desc.includes(keyword)) {
+            const specificTags = imageSpecificHashtags[keyword];
+            hashtags = hashtags.concat(specificTags.slice(0, 2));
+          }
+        });
+        
+        // If we don't have many hashtags, add some general ones
+        if (hashtags.length < 5) {
+          hashtags.push("#instagood", "#photooftheday");
+        }
+        
+        // Limit to max 10 hashtags and shuffle them
+        if (hashtags.length > 10) {
+          shuffleArray(hashtags);
+          hashtags = hashtags.slice(0, 10);
+        }
+        
+        // Update the results
+        captionResult.textContent = randomCaption;
+        
+        // If there's a description, add it to the caption
+        if (desc) {
+          const enhancedDesc = enhanceDescription(desc);
+          captionResult.textContent += " " + enhancedDesc;
+        }
+        
+        hashtagsResult.textContent = hashtags.join(" ");
+        
+        // Hide loading, show output
+        loadingDiv.classList.add('hidden');
+        outputDiv.classList.remove('hidden');
+      }, 1500); // Simulate AI processing time
+    }
+    
+    function enhanceDescription(desc) {
+      // Make the description more engaging
+      if (desc.length < 20) {
+        return desc;
+      }
+      
+      // Add some emojis based on content
+      if (desc.includes("sunset")) desc += " 🌅";
+      if (desc.includes("beach")) desc += " 🏖️";
+      if (desc.includes("food")) desc += " 🍽️";
+      if (desc.includes("coffee")) desc += " ☕";
+      if (desc.includes("friend")) desc += " 👯";
+      if (desc.includes("travel")) desc += " ✈️";
+      
+      return desc;
+    }
+    
+    function copyToClipboard() {
+      const caption = captionResult.textContent;
+      const hashtags = hashtagsResult.textContent;
+      const fullText = caption + "\n\n" + hashtags;
+      
+      navigator.clipboard.writeText(fullText).then(() => {
+        copyBtn.textContent = "Copied!";
+        setTimeout(() => {
+          copyBtn.textContent = "Copy to Clipboard";
+        }, 2000);
+      });
+    }
+    
+    function shuffleArray(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+    }
+  </script>
+</body>
+</html>
